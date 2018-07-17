@@ -32,6 +32,51 @@ class StorageManager(object):
         Mirror.init_mirror(mirror_db)
         self.public_proxy = public_proxy
 
+    def _create_key_from_local(self, filepath, recorder, key_name,
+                               bucket_name, content_type, md5, timetag):
+        recorder.start()
+        try:
+            # --- upload to ceph ----
+            success, key = CephModel.create_key(bucket_name, key_name,
+                                                filepath, content_type, md5)
+            if md5 and not key and not success:
+                recorder.invalid()
+                return
+            if not success:
+                recorder.fail()
+                return
+
+            # --- tag index ----
+            if not content_type:
+                content_type = key.content_type
+            md5 = key.etag[1:-1]
+
+            if not timetag:
+                timetag = int(time.time())
+
+            success = KeyIndex.index_key(bucket_name, key_name, content_type,
+                                         md5, timetag, key.size)
+            if not success:
+                recorder.fail()
+                return
+
+            recorder.succeed()
+        except Exception as err:
+            logging.error('error create key: %s, %s, %s' % (
+                bucket_name, key_name, err))
+        finally:
+            if filepath:
+                os.remove(filepath)
+
+    def create_key_from_local(self, key_name, key_url, bucket_name,
+                              content_type='', md5='', timetag=0):
+        recorder = StateRecorder(key_url+key_name+bucket_name)
+        downloader = Downloader(key_url, recorder)
+        gevent.spawn(self._create_key_from_remote, downloader, recorder,
+                     key_name, bucket_name, content_type, md5, timetag)
+
+        return recorder.token
+
     def _create_key_from_remote(self, downloader, recorder, key_name,
                                 bucket_name, content_type, md5, timetag):
         recorder.start()
@@ -90,7 +135,7 @@ class StorageManager(object):
     '''
     def create_key_from_remote(self, key_name, key_url, bucket_name,
                                content_type='', md5='', timetag=0):
-        recorder = StateRecorder()
+        recorder = StateRecorder(key_url+key_name+bucket_name)
         downloader = Downloader(key_url, recorder)
         gevent.spawn(self._create_key_from_remote, downloader, recorder,
                      key_name, bucket_name, content_type, md5, timetag)
