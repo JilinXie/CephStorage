@@ -1,3 +1,6 @@
+#### API document
+https://app.swaggerhub.com/apis/elmeast1/CephStorage/1.0.2
+
 #### Key Storage
 1. bucket name: username + '_'*3 + bucketname
 2. properties available to set:
