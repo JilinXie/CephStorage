@@ -1,6 +1,5 @@
-import random
+import hashlib
 import time
-from string import ascii_uppercase, digits
 
 
 class StateRecorder(object):
@@ -12,9 +11,10 @@ class StateRecorder(object):
         cls.coll = progress_coll
         cls.coll.ensure_index("updated_at", expireAfterSeconds=3*3600)
 
-    def __init__(self):
-        t = ''.join(random.choice(ascii_uppercase + digits) for _ in range(10))
-        self.token = '%s.%.3f' % (t, time.time())
+    def __init__(self, token_seed):
+        m = hashlib.md5()
+        m.update(token_seed)
+        self.token = m.hexdigest()
 
     def update_progress(self, state):
         self.coll.update({'token': self.token},

@@ -1,8 +1,9 @@
-import hashlib
 import logging
 import os
 import time
 import requests
+import random
+from string import ascii_uppercase, digits
 
 
 class Downloader(object):
@@ -18,9 +19,6 @@ class Downloader(object):
         cls.download_path = download_path
 
     def __init__(self, key_url, state_recorder):
-        m = hashlib.md5()
-        m.update(key_url)
-        self.token = m.hexdigest()
         self.key_url = key_url
         self.recorder = state_recorder
 
@@ -34,10 +32,11 @@ class Downloader(object):
                2 - download duplicate
     '''
     def download(self):
-        if self.recorder.under_process(self.token):
+        if self.recorder.under_process():
             return 2, None
+        rs = ''.join(random.choice(ascii_uppercase + digits))
         fp = os.path.join(self.download_path,
-                          '%s_%f.tmp' % (self.token, time.time()))
+                          '%s_%f.tmp' % (rs, time.time()))
 
         try:
             res = requests.get(self.key_url, stream=True, timeout=60)
