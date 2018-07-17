@@ -1,0 +1,2 @@
+conf_file=$(pwd)
+./nginx -c $conf_file/storage.conf
