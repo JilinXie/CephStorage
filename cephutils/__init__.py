@@ -32,8 +32,11 @@ class StorageManager(object):
         Mirror.init_mirror(mirror_db)
         self.public_proxy = public_proxy
 
-    def _create_key_from_local(self, filepath, recorder, key_name,
-                               bucket_name, content_type, md5, timetag):
+    def create_key_from_local(self, filepath, key_name, key_url,
+                              bucket_name, content_type='', md5='',
+                              timetag=''):
+        recorder = StateRecorder(key_url+key_name+bucket_name)
+
         recorder.start()
         try:
             # --- upload to ceph ----
@@ -67,15 +70,6 @@ class StorageManager(object):
         finally:
             if filepath:
                 os.remove(filepath)
-
-    def create_key_from_local(self, key_name, key_url, bucket_name,
-                              content_type='', md5='', timetag=0):
-        recorder = StateRecorder(key_url+key_name+bucket_name)
-        downloader = Downloader(key_url, recorder)
-        gevent.spawn(self._create_key_from_remote, downloader, recorder,
-                     key_name, bucket_name, content_type, md5, timetag)
-
-        return recorder.token
 
     def _create_key_from_remote(self, downloader, recorder, key_name,
                                 bucket_name, content_type, md5, timetag):
