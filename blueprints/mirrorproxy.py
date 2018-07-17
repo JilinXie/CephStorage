@@ -47,16 +47,30 @@ def mirror_op():
         return jsonify({'msg': 'success'})
 
 
-def download_and_ceph(generator, filepath):
+def download_and_ceph(generator, filepath, bucket_name, key_name, key_url):
     with open(filepath, 'a') as f:
         while True:
             chunk = generator.next()
             if not chunk:
                 break
             f.write(chunk)
+    manager.create_key_from_local(filepath, key_name, key_url, bucket_name)
 
 
-def sync_key(url, bucket_name='', key_name=''):
+def sync_key_range(url, range_header):
+    chunk_size = 4*1024
+    try:
+        res = requests.get(url, headers={'Range': range_header}, stream=True)
+    except Exception as err:
+        logging.error('error request: %s: %s' % (url, err))
+    return res.iter_content(chunk_size=chunk_size), res.headers['content-type']
+
+
+def sync_key(url, bucket_name, key_name):
+    '''
+    download from url, stream to user while uploading to Ceph
+    If user connection close, will go on uploading process in gevent.
+    '''
     try:
         res = requests.get(url, stream=True)
     except Exception as err:
@@ -84,7 +98,8 @@ def sync_key(url, bucket_name='', key_name=''):
         except Exception as err:
             logging.error(err)
         finally:
-            gevent.spawn(download_and_ceph, generator, filepath)
+            gevent.spawn(download_and_ceph, generator, filepath,
+                         bucket_name, key_name, url)
 
     return generate(), res.headers['content-type']
 
@@ -92,22 +107,28 @@ def sync_key(url, bucket_name='', key_name=''):
 @mproxy.route('/proxy/<path:url>', methods=['GET'])
 def mirror_proxy(url):
     mirror_host = request.headers['host']
+    range_h = request.headers.get('Range', '')
     res = manager.get_mirror(mirror_host)
     try:
         bucket_name = res['bucket_name']
         origin_host = res['origin_host']
     except Exception as err:
         logging.error('mirror not found: %s' % err)
-        abort(404)
-    key = manager.get_key(bucket_name, url)
+        abort(400)
+    key_name = url
+    key = manager.get_key(bucket_name, key_name)
 
-    # url of key from Ceph
-    if key or key.get('url', ''):
-        url = key['url']
+    if key and key.get('url', ''):
+        stream, ct = sync_key_range(key['url'], range_h)
     else:
         url = os.path.join(origin_host, url)
         if not url.startswith('http'):
             url = 'http://' + url
 
-    stream, ct = sync_key(url, bucket_name, key.get('key', ''))
+        if not range_h:
+            stream, ct = sync_key(url, bucket_name, key_name)
+        else:
+            stream, ct = sync_key_range(url, range_h)
+            gevent.spawn(manager.create_key_from_remote, key_name,
+                         url, bucket_name)
     return Response(stream_with_context(stream), content_type=ct)
