@@ -37,9 +37,11 @@ class StorageManager(object):
         recorder.start()
         try:
             # --- download ----
-            success, fpath = downloader.download()
-            if not success:
+            state, fpath = downloader.download()
+            if state == 1:
                 recorder.fail()
+                return
+            elif state == 2:
                 return
 
             # --- upload to ceph ----

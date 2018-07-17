@@ -1,10 +1,8 @@
+import hashlib
 import logging
 import os
-import random
-import string
 import time
 import requests
-from string import ascii_uppercase, digits
 
 
 class Downloader(object):
@@ -20,20 +18,26 @@ class Downloader(object):
         cls.download_path = download_path
 
     def __init__(self, key_url, state_recorder):
-        t = ''.join(random.choice(ascii_uppercase + digits) for _ in range(10))
-
-        self.token = '%s.%.3f' % (t, time.time())
+        m = hashlib.md5()
+        m.update(key_url)
+        self.token = m.hexdigest()
         self.key_url = key_url
         self.recorder = state_recorder
 
     '''
     The file is left for the caller to clean
+    RETURN: (state, filepath)
+        filepath: the file path where content is downloaded,
+                  None if download fail to start or duplicate.
+        state: 0 - download success
+               1 - download fail
+               2 - download duplicate
     '''
     def download(self):
-        rs = ''.join(random.choice(string.ascii_uppercase + string.digits)
-                     for _ in range(15))
+        if self.recorder.under_process(self.token):
+            return 2, None
         fp = os.path.join(self.download_path,
-                          '%s_%f.tmp' % (rs, time.time()))
+                          '%s_%f.tmp' % (self.token, time.time()))
 
         try:
             res = requests.get(self.key_url, stream=True, timeout=60)
@@ -41,12 +45,12 @@ class Downloader(object):
                 logging.error('error request, invalid status_code: %d'
                               % res.status_code)
                 self.recorder.fail()
-                return False, None
+                return 1, None
         except Exception as err:
             logging.error('error request key_url: %s; %s' % (
                           self.key_url, err))
             self.recorder.fail()
-            return False, fp
+            return 1, fp
 
         try:
             with open(fp, 'wb') as f:
@@ -58,6 +62,6 @@ class Downloader(object):
             logging.error('error of %s writing to dist: %s' % (
                           self.key_name, err))
             self.recorder.fail()
-            return False, fp
+            return 1, fp
 
-        return True, fp
+        return 0, fp
