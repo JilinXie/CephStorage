@@ -5,7 +5,7 @@ mongo_client = MongoClient('mongodb://127.0.0.1:27017')
 # collection storing progress.
 progress_coll = mongo_client.CephStorageGeneral.progress
 index_db = mongo_client.CephStorageIndex
-mirror_coll = mongo_client.CephStorageGeneral.mirror
+general_db = mongo_client.CephStorageGeneral
 
 '''
 DBs and Collections used:

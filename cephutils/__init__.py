@@ -3,7 +3,7 @@ import logging
 import os
 import time
 from gevent import monkey
-from index import KeyIndex
+from index import KeyIndex, BucketIndex
 from cephop import CephModel
 from upload import Downloader
 from tools import StateRecorder
@@ -24,12 +24,13 @@ class StorageManager(object):
     '''
     def __init__(self, ak, sk, server_host, public_proxy,
                  progress_coll, download_path,
-                 index_db, mirror_db):
+                 index_db, general_db):
         CephModel.init_boto(ak, sk, server_host)
         Downloader.init_downloader(download_path)
         StateRecorder.init_recorder(progress_coll)
         KeyIndex.init_index(index_db)
-        Mirror.init_mirror(mirror_db)
+        BucketIndex.init_index(general_db.buckets)
+        Mirror.init_mirror(general_db.mirror)
         self.public_proxy = public_proxy
 
     def create_key_from_local(self, filepath, key_name, key_url,

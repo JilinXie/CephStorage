@@ -2,6 +2,26 @@ import logging
 import time
 
 
+class BucketIndex(object):
+    index_coll = None
+
+    @classmethod
+    def init_index(cls, index_coll):
+        cls.index_coll = index_coll
+
+    @classmethod
+    def add_key(cls, bucket_name, key_size):
+        cls.index_coll.update({'bucket': bucket_name},
+                              {'$inc': {'size': key_size,
+                                        'keyamount': 1}},
+                              upsert=True)
+
+    @classmethod
+    def get(cls, bucket_name):
+        res = cls.index_coll.find_one({'bucket': bucket_name})
+        return res
+
+
 class KeyIndex(object):
     '''
     indexing keys stored in ceph for quicker searching.
@@ -29,6 +49,7 @@ class KeyIndex(object):
                                   'content_type': content_type,
                                   'size': size}},
                         upsert=True)
+            BucketIndex.add_key(bucket_name, size)
         except Exception as err:
             logging.error('Fail to index key on mongo: %s' % err)
             return False
