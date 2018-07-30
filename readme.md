@@ -11,20 +11,20 @@ https://app.swaggerhub.com/apis/elmeast1/CephStorage/1.0.2
 	
 	```json
 	{
-		'key': KEYNAME(String),
-		'ts': INT(Timestamp),
-		'vfolder': PrefixingPath(String),
-		'md5': MD5(String),
-		'content_type':  ContentType(String),
-		'size': SizeOfKey(Int)
+		"key": KEYNAME(String),
+		"ts": INT(Timestamp),
+		"vfolder": PrefixingPath(String),
+		"md5": MD5(String),
+		"content_type":  ContentType(String),
+		"size": SizeOfKey(Int)
 	}
 	```
 4. Key Creating Progress Record:
 	
 	```json
 	{
-		'token': Token(String),
-		'progress': State(String),
+		"token": Token(String),
+		"progress": State(String),
 	}
 	```
 	
@@ -48,9 +48,9 @@ https://app.swaggerhub.com/apis/elmeast1/CephStorage/1.0.2
 
 ```json
 {
-	'mirror_host': String [Unique]
-	'bucket_name': String
-	'real_host': String
+	"mirror_host": String [Unique]
+	"bucket_name": String
+	"real_host": String
 }
 ```
 
