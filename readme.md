@@ -48,8 +48,8 @@ https://app.swaggerhub.com/apis/elmeast1/CephStorage/1.0.2
 
 ```json
 {
-	"mirror_host": "String [Unique]"
-	"bucket_name": "String"
+	"mirror_host": "String [Unique]",
+	"bucket_name": "String",
 	"real_host": "String"
 }
 ```
